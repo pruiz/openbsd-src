@@ -34,4 +34,4 @@ being used.  Thanks.
 The manual page (amd/amd.8) only lists the command line options.  See the
 texinfo document doc/amdref.texinfo for a more detailed discussion.
 
-$Id: README,v 1.1.1.1 1995/10/18 08:47:24 deraadt Exp $
+$Id: README,v 1.1 1995/10/18 08:47:24 deraadt Exp $
