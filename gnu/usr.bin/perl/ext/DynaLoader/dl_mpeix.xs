@@ -3,7 +3,6 @@
  * Version: 2.1, 1996/07/25
  * Version: 2.2, 1997/09/25 Mark Bixby (markb@cccd.edu)
  * Version: 2.3, 1998/11/19 Mark Bixby (markb@cccd.edu)
- * Version: 2.4, 2002/03/24 Mark Bixby (mark@bixby.org)
  */
 
 #include "EXTERN.h"
@@ -13,7 +12,7 @@
 #ifdef __GNUC__
 extern void HPGETPROCPLABEL(    int    parms,
                                 char * procname,
-                                void * plabel,
+                                int  * plabel,
                                 int  * status,
                                 char * firstfile,
                                 int    casesensitive,
@@ -31,16 +30,19 @@ typedef struct {
   char  filename[PATH_MAX + 3];
   } t_mpe_dld, *p_mpe_dld;
 
+static AV *dl_resolve_using = Nullav;
+
 static void
-dl_private_init(pTHX)
+dl_private_init()
 {
-    (void)dl_generic_private_init(aTHX);
+    (void)dl_generic_private_init();
+    dl_resolve_using = perl_get_av("DynaLoader::dl_resolve_using", 0x4);
 }
 
 MODULE = DynaLoader     PACKAGE = DynaLoader
 
 BOOT:
-    (void)dl_private_init(aTHX);
+    (void)dl_private_init();
 
 void *
 dl_load_file(filename, flags=0)
@@ -49,13 +51,13 @@ dl_load_file(filename, flags=0)
     PREINIT:
     char                buf[PATH_MAX + 3];
     p_mpe_dld           obj = NULL;
-
+    int                 i;
     CODE:
-    DLDEBUG(1,PerlIO_printf(Perl_debug_log, "dl_load_file(%s,%x):\n", filename,
+    DLDEBUG(1,PerlIO_printf(PerlIO_stderr(), "dl_load_file(%s,%x):\n", filename,
 flags));
     if (flags & 0x01)
-        Perl_warn(aTHX_ 
-"Can't make loaded symbols global on this platform while loading %s",filename);
+        warn("Can't make loaded symbols global on this platform while loading %s
+",filename);
     obj = (p_mpe_dld) safemalloc(sizeof(t_mpe_dld));
     memzero(obj, sizeof(t_mpe_dld));
     if (filename[0] != '/')
@@ -66,13 +68,13 @@ flags));
     else
         sprintf(obj->filename," %s ",filename);
 
-    DLDEBUG(2,PerlIO_printf(Perl_debug_log," libref=%x\n", obj));
+    DLDEBUG(2,PerlIO_printf(PerlIO_stderr()," libref=%x\n", obj));
 
     ST(0) = sv_newmortal() ;
     if (obj == NULL)
-        SaveError(aTHX_"%s",Strerror(errno));
+        SaveError("%s",Strerror(errno));
     else
-        sv_setiv( ST(0), PTR2IV(obj) );
+        sv_setiv( ST(0), (IV)obj);
 
 void *
 dl_find_symbol(libhandle, symbolname)
@@ -84,7 +86,7 @@ dl_find_symbol(libhandle, symbolname)
     char      symname[PATH_MAX + 3];
     void *    symaddr = NULL;
     int       status;
-    DLDEBUG(2,PerlIO_printf(Perl_debug_log,"dl_find_symbol(handle=%x, symbol=%s)\n",
+    DLDEBUG(2,PerlIO_printf(PerlIO_stderr(),"dl_find_symbol(handle=%x, symbol=%s)\n",
                 libhandle, symbolname));
     ST(0) = sv_newmortal() ;
     errno = 0;
@@ -93,12 +95,12 @@ dl_find_symbol(libhandle, symbolname)
     HPGETPROCPLABEL(8, symname, &symaddr, &status, obj->filename, 1,
                     0, &datalen, 1, 0, 0);
 
-    DLDEBUG(2,PerlIO_printf(Perl_debug_log,"  symbolref(PROCEDURE) = %x, status=%x\n", symaddr, status));
+    DLDEBUG(2,PerlIO_printf(PerlIO_stderr(),"  symbolref(PROCEDURE) = %x, status=%x\n", symaddr, status));
 
     if (status != 0) {
-        SaveError(aTHX_"%s",(errno) ? Strerror(errno) : "Symbol not found") ;
+        SaveError("%s",(errno) ? Strerror(errno) : "Symbol not found") ;
     } else {
-        sv_setiv( ST(0), PTR2IV(symaddr) );
+        sv_setiv( ST(0), (IV)symaddr);
     }
 
 void
@@ -111,36 +113,17 @@ void
 dl_install_xsub(perl_name, symref, filename="$Package")
     char *      perl_name
     void *      symref
-    const char *      filename
+    char *      filename
     CODE:
-    DLDEBUG(2,PerlIO_printf(Perl_debug_log,"dl_install_xsub(name=%s, symref=%x)\n",
+    DLDEBUG(2,PerlIO_printf(PerlIO_stderr(),"dl_install_xsub(name=%s, symref=%x)\n",
             perl_name, symref));
-    ST(0) = sv_2mortal(newRV((SV*)newXS_flags(perl_name,
-					      (void(*)(pTHX_ CV *))symref,
-					      filename, NULL,
-					      XS_DYNAMIC_FILENAME)));
+    ST(0)=sv_2mortal(newRV((SV*)newXS(perl_name, (void(*)())symref, filename)));
 
 char *
 dl_error()
     CODE:
-    dMY_CXT;
-    RETVAL = dl_last_error ;
+    RETVAL = LastError ;
     OUTPUT:
     RETVAL
-
-#if defined(USE_ITHREADS)
-
-void
-CLONE(...)
-    CODE:
-    MY_CXT_CLONE;
-
-    /* MY_CXT_CLONE just does a memcpy on the whole structure, so to avoid
-     * using Perl variables that belong to another thread, we create our 
-     * own for this thread.
-     */
-    MY_CXT.x_dl_last_error = newSVpvn("", 0);
-
-#endif
 
 # end.
