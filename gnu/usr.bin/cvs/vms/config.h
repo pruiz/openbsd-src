@@ -5,14 +5,6 @@
 #define CLIENT_SUPPORT 1
 #undef SERVER_SUPPORT
 
-/* Set up for other #if's which follow */
-#ifndef __DECC_VER
-#define __DECC_VER  0
-#endif
-#ifndef __VMS_VER
-#define __VMS_VER   0
-#endif
-
 /* VMS is case insensitive */
 /* #define FOLD_FN_CHAR(c) tolower(c) */
 
@@ -22,6 +14,9 @@
 
 /* More issues with how VMS names files, kind of a kludge.  See login.c.  */
 #define NO_SLASH_AFTER_HOME 1
+
+/* Only good for NT or DOS with hacked open */
+/* #undef LINES_CRLF_TERMINATED */
 
 /* Define to empty if the keyword does not work.  */
 /* #undef const */
@@ -52,7 +47,7 @@
 /* #undef mode_t */
 
 /* Define if you don't have <dirent.h>, but have <ndir.h>.  */
-#define HAVE_NDIR_H 1
+/* #undef NDIR */
 
 /* Define to `int' if <sys/types.h> doesn't define.  */
 /* #undef pid_t */
@@ -88,8 +83,17 @@
 /* Define if the closedir function returns void instead of int.  */
 /* #undef VOID_CLOSEDIR */
 
+/* Define if you want direct TCP access to server */
+#define USE_DIRECT_TCP 1
+
 /* Define if you have MIT Kerberos version 4 available.  */
 /* #undef HAVE_KERBEROS */
+
+/* The number of bytes in a int.  */
+#define SIZEOF_INT 4
+
+/* The number of bytes in a long.  */
+#define SIZEOF_LONG 4
 
 /* Define if you have the fchmod function.  */
 /* #undef HAVE_FCHMOD */
@@ -118,8 +122,17 @@
 /* Define if you have the rename function */
 #define HAVE_RENAME 1
 
+/* Define if you have the strdup function */
+#define HAVE_STRDUP 1
+
+/* Define if you have the mkfifo function.  */
+/* #undef HAVE_MKFIFO */
+
 /* Define if you have the putenv function.  */
 /* #undef HAVE_PUTENV */
+
+/* Define if you have the setvbuf function.  */
+/* #undef HAVE_SETVBUF */
 
 /* Define if you have the timezone function.  */
 /* #undef HAVE_TIMEZONE */
@@ -128,15 +141,13 @@
 #define HAVE_VFORK
 
 /* Define if you have the vprintf function.  */
-#define HAVE_VPRINTF
+/* #undef HAVE_VPRINTF */
 
 /* Define if you have the <errno.h> header file.  */
 /* #undef HAVE_ERRNO_H */
 
 /* Define if you have the <fcntl.h> header file.  */
-#if __DECC_VER >= 50700000
-# define HAVE_FCNTL_H 1
-#endif
+/* #undef HAVE_FCNTL_H */
 
 /* Define if you have the <memory.h> header file.  */
 /* #undef HAVE_MEMORY_H */
@@ -146,12 +157,6 @@
 
 /* Define if you have the <string.h> header file.  */
 #define HAVE_STRING_H 1
-
-/* Define to force lib/regex.c to use malloc instead of alloca.  */
-#define REGEX_MALLOC 1
-
-/* Define to force lib/regex.c to define re_comp et al.  */
-#define _REGEX_RE_COMP 1
 
 /* Define if you have the <sys/select.h> header file.  */
 /* #undef HAVE_SYS_SELECT_H */
@@ -196,8 +201,6 @@ extern void fnfold (char *FILENAME);
 #define NO_SOCKET_TO_FD 1
 #define START_SERVER_RETURNS_SOCKET 1
 #define SEND_NEVER_PARTIAL 1
-#define SYSTEM_GETCALLER() getlogin ()
-#define GETPWNAM_MISSING 1
 
 /* Avoid name conflicts with VMS libraries.  */
 #define getopt cvs_getopt
@@ -205,12 +208,6 @@ extern void fnfold (char *FILENAME);
 #define optopt cvs_optopt
 #define optarg cvs_optarg
 #define opterr cvs_opterr
-
-/* Avoid open/read/closedir name conflicts with DEC C 5.7 libraries,
-   and fix the problem with readdir() retaining the trailing period.  */
-#define CVS_OPENDIR  vms_opendir
-#define CVS_READDIR  vms_readdir
-#define CVS_CLOSEDIR vms_closedir
 
 /* argv[0] in VMS is the full pathname which would look really ugly in error
    messages.  Even if we stripped out the directory and ".EXE;5", it would
@@ -220,5 +217,3 @@ extern void fnfold (char *FILENAME);
    might be worth messing with, but it also seems fine to just always call
    it "cvs".  */
 #define ARGV0_NOT_PROGRAM_NAME
-
-#define CVS_UNLINK vms_unlink
