@@ -103,7 +103,7 @@ static int cluster_labs_rsa_mod_exp(BIGNUM *r0, const BIGNUM *I, RSA *rsa);
 
 /* DSA stuff */
 #ifndef OPENSSL_NO_DSA
-static DSA_SIG *cluster_labs_dsa_sign(const unsigned char *dgst, int dlen, DSA *dsa);
+DSA_SIG *cluster_labs_dsa_sign(const unsigned char *dgst, int dlen, DSA *dsa);
 static int cluster_labs_dsa_verify(const unsigned char *dgst, int dgst_len,
 				DSA_SIG *sig, DSA *dsa);
 static int cluster_labs_dsa_mod_exp(DSA *dsa, BIGNUM *rr, BIGNUM *a1,
@@ -245,9 +245,6 @@ static ENGINE *engine_cluster_labs(void)
 	return ret;
 	}
 
-#ifdef ENGINE_DYNAMIC_SUPPORT
-static
-#endif
 void ENGINE_load_cluster_labs(void)
 	{
 
@@ -507,7 +504,7 @@ static int cluster_labs_rsa_mod_exp(BIGNUM *r0, const BIGNUM *I, RSA *rsa)
 
 	}
 	
-static DSA_SIG *cluster_labs_dsa_sign(const unsigned char *dgst, int dlen, DSA *dsa)
+DSA_SIG *cluster_labs_dsa_sign(const unsigned char *dgst, int dlen, DSA *dsa)
 	{
 
 	if(cluster_labs_dso == NULL)
