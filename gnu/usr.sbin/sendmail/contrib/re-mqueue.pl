@@ -93,17 +93,6 @@
 #	Allow zero-length df files (empty message body)
 #	Preserve $! for error messages
 #
-# Updated by Graeme Hewson <ghewson@uk.oracle.com> April 2000
-#
-#	Improve handling of race between re-mqueue and sendmail
-#
-# Updated by Graeme Hewson <graeme.hewson@oracle.com> June 2000
-#
-#	Don't exit(0) at end so can be called as subroutine
-#
-# NB This program can't handle separate qf/df/xf subdirectories
-# as introduced in sendmail 8.10.0.
-#
 
 use Sys::Syslog;
 
@@ -147,17 +136,18 @@ while ($dfile = pop(@dfiles)) {
     ($qfile = $dfile) =~ s/^d/q/;
     ($xfile = $dfile) =~ s/^d/x/;
     ($mfile = $dfile) =~ s/^df//;
+    if (! -e $dfile) {
+	print "$dfile is gone - skipping\n" if ($debug);
+	next;
+    }
     if (! -e $qfile || -z $qfile) {
 	print "$qfile is gone or zero bytes - skipping\n" if ($debug);
 	next;
     }
 
+    $mtime = $now;
     ($dev,$ino,$mode,$nlink,$uid,$gid,$rdev,$size,
      $atime,$mtime,$ctime,$blksize,$blocks) = stat($dfile);
-    if (! defined $mtime) {
-	print "$dfile is gone - skipping\n" if ($debug);
-	next;
-    }
 
     # Compare timestamps
     if (($mtime + $age) > $now) {
@@ -191,17 +181,6 @@ while ($dfile = pop(@dfiles)) {
 	next;
     }
     print "$qfile now flock()ed\n" if ($debug);
-
-    # Check df* file again in case sendmail got in
-    if (! -e $dfile) {
-	print "$mfile sent - skipping\n" if ($debug);
-	# qf* file created by ourselves at open? (Almost certainly)
-	if (-z $qfile) {
-	   unlink($qfile);
-	}
-	close(QF);
-	next;
-    }
 
     # Show time!  Do the link()s
     if (link("$dfile", "$queueB/$dfile") == 0) {
@@ -256,3 +235,4 @@ while ($dfile = pop(@dfiles)) {
     &syslog('info', '%s moved to %s', $mfile, $queueB);
     print "Done with $dfile $qfile\n\n" if ($debug);
 }
+exit 0;

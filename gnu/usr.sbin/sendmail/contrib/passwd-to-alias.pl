@@ -8,23 +8,22 @@
 
 print "# Generated from passwd by $0\n";
 
-$wordpat = '([a-zA-Z]+?[a-zA-Z0-9-]*)?[a-zA-Z0-9]';	# 'DB2'
 while (@a = getpwent) {
     ($name,$passwd,$uid,$gid,$quota,$comment,$gcos,$dir,$shell) = @a;
 
     ($fullname = $gcos) =~ s/,.*$//;
 
-    if (!-d $dir || !-x $shell || $shell =~ m!/bin/(false|true)$!) {
-	print "$name: root\n";				# handle pseudo user
+    if (!-d $dir || !-x $shell) {
+	print "$name: root\n";
     }
 
     $fullname =~ s/\.*[ _]+\.*/./g;
-    $fullname =~ tr [Â‰Èˆ¸≈ƒ÷‹] [aaeouAAOU];  # <hakan@af.lu.se> 1997-06-15
-    next if (!$fullname || lc($fullname) eq $name);	# avoid nonsense
-    if ($fullname =~ /^$wordpat(\.$wordpat)*$/o) {	# Ulrich Windl
+    $fullname =~ tr [Â‰ˆ≈ƒ÷È] [aaoAAOe];  # <hakan@af.lu.se> 1997-06-15
+    if ($fullname =~ /^[a-zA-Z][a-zA-Z-]+(\.[a-zA-Z][a-zA-Z-]+)+$/) {  
+#   if ($fullname =~ /^[a-zA-Z]+(\.[a-zA-Z]+)+$/) {    # Kari E. Hurtta
 	print "$fullname: $name\n";
     } else {
-	print "# $fullname: $name\n";			# avoid strange names
+	print "# $fullname: $name\n";
     }
 };
 
