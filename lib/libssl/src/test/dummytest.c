@@ -8,7 +8,7 @@
 
 int main(int argc, char *argv[])
 	{
-	char *p, *q = 0, *program;
+	char *p, *q, *program;
 
 	p = strrchr(argv[0], '/');
 	if (!p) p = strrchr(argv[0], '\\');
@@ -34,8 +34,7 @@ int main(int argc, char *argv[])
 		}
 
 	for(p = program; *p; p++)
-		if (islower((unsigned char)(*p)))
-			*p = toupper((unsigned char)(*p));
+		if (islower(*p)) *p = toupper(*p);
 
 	q = strstr(program, "TEST");
 	if (q > p && q[-1] == '_') q--;
