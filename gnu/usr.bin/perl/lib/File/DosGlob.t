@@ -9,124 +9,154 @@ BEGIN {
     @INC = '../lib';
 }
 
-use Test::More tests => 20;
+print "1..10\n";
 
 # override it in main::
 use File::DosGlob 'glob';
 
-require Cwd;
-
+# test if $_ takes as the default
 my $expected;
-$expected = $_ = "op/a*.t";
+if ($^O eq 'MacOS') {
+    $expected = $_ = ":op:a*.t";
+} else {
+    $expected = $_ = "op/a*.t";
+}
 my @r = glob;
-is ($_, $expected, 'test if $_ takes as the default');
-cmp_ok(@r, '>=', 9) or diag("|@r|");
+print "not " if $_ ne $expected;
+print "ok 1\n";
+print "# |@r|\nnot " if @r < 9;
+print "ok 2\n";
 
-@r = <*/a*.t>;
+# check if <*/*> works
+if ($^O eq 'MacOS') {
+    @r = <:*:a*.t>;
+} else {
+    @r = <*/a*.t>;
+}
 # atleast {argv,abbrev,anydbm,autoloader,append,arith,array,assignwarn,auto}.t
-cmp_ok(@r, '>=', 9, 'check <*/*>') or diag("|@r|");
+print "# |@r|\nnot " if @r < 9;
+print "ok 3\n";
 my $r = scalar @r;
 
+# check if scalar context works
 @r = ();
-while (defined($_ = <*/a*.t>)) {
+while (defined($_ = ($^O eq 'MacOS') ? <:*:a*.t> : <*/a*.t>)) {
     print "# $_\n";
     push @r, $_;
 }
-is(scalar @r, $r, 'check scalar context');
+print "not " if @r != $r;
+print "ok 4\n";
 
+# check if list context works
 @r = ();
-for (<*/a*.t>) {
-    print "# $_\n";
-    push @r, $_;
+if ($^O eq 'MacOS') {
+    for (<:*:a*.t>) {
+    	print "# $_\n";
+    	push @r, $_;
+    }
+} else {
+    for (<*/a*.t>) {
+    	print "# $_\n";
+    	push @r, $_;
+    }
 }
-is(scalar @r, $r, 'check list context');
+print "not " if @r != $r;
+print "ok 5\n";
 
+# test if implicit assign to $_ in while() works
 @r = ();
-while (<*/a*.t>) {
-    print "# $_\n";
-    push @r, $_;
+if ($^O eq 'MacOS') {
+    while (<:*:a*.t>) {
+    	print "# $_\n";
+	push @r, $_;
+    }
+} else {
+    while (<*/a*.t>) {
+    	print "# $_\n";
+	push @r, $_;
+    }
 }
-is(scalar @r, $r, 'implicit assign to $_ in while()');
+print "not " if @r != $r;
+print "ok 6\n";
 
+# test if explicit glob() gets assign magic too
 my @s = ();
-my $pat = '*/a*.t';
+my $pat = ($^O eq 'MacOS') ? ':*:a*.t': '*/a*.t';
 while (glob ($pat)) {
     print "# $_\n";
     push @s, $_;
 }
-is("@r", "@s", 'explicit glob() gets assign magic too');
+print "not " if "@r" ne "@s";
+print "ok 7\n";
 
+# how about in a different package, like?
 package Foo;
 use File::DosGlob 'glob';
-use Test::More;
 @s = ();
-$pat = '*/a*.t';
+$pat = $^O eq 'MacOS' ? ':*:a*.t' : '*/a*.t';
 while (glob($pat)) {
     print "# $_\n";
     push @s, $_;
 }
-is("@r", "@s", 'in a different package');
+print "not " if "@r" ne "@s";
+print "ok 8\n";
 
+# test if different glob ops maintain independent contexts
 @s = ();
-while (<*/a*.t>) {
-    my $i = 0;
-    print "# $_ <";
-    push @s, $_;
-    while (<*/b*.t>) {
-	print " $_";
-	$i++;
+if ($^O eq 'MacOS') {
+    while (<:*:a*.t>) {
+	my $i = 0;
+	print "# $_ <";
+	push @s, $_;
+	while (<:*:b*.t>) {
+	    print " $_";
+	    $i++;
+	}
+	print " >\n";
     }
-    print " >\n";
+} else {
+    while (<*/a*.t>) {
+	my $i = 0;
+	print "# $_ <";
+	push @s, $_;
+	while (<*/b*.t>) {
+	    print " $_";
+	    $i++;
+	}
+	print " >\n";
+    }
 }
-is("@r", "@s", 'different glob ops maintain independent contexts');
+print "not " if "@r" ne "@s";
+print "ok 9\n";
 
-@s = ();
+# how about a global override, hm?
 eval <<'EOT';
 use File::DosGlob 'GLOBAL_glob';
 package Bar;
-while (<*/a*.t>) {
-    my $i = 0;
-    print "# $_ <";
-    push @s, $_;
-    while (glob '*/b*.t') {
-	print " $_";
-	$i++;
+@s = ();
+if ($^O eq 'MacOS') {
+    while (<:*:a*.t>) {
+	my $i = 0;
+	print "# $_ <";
+	push @s, $_;
+	while (glob ':*:b*.t') {
+	    print " $_";
+	    $i++;
+	}
+	print " >\n";
     }
-    print " >\n";
-}
-EOT
-is("@r", "@s", 'global override');
-
-# Test that a glob pattern containing ()'s works.
-# NB. The spaces in the glob patterns need to be backslash escaped.
-my $filename_containing_parens = "foo (123) bar";
-SKIP: {
-    skip("can't create '$filename_containing_parens': $!", 9)
-	unless open my $touch, ">", $filename_containing_parens;
-    close $touch;
-
-    foreach my $pattern ("foo\\ (*", "*)\\ bar", "foo\\ (1*3)\\ bar") {
-	@r = ();
-	eval { @r = File::DosGlob::glob($pattern) };
-	is($@, "", "eval for glob($pattern)");
-	is(scalar @r, 1);
-	is($r[0], $filename_containing_parens);
-    }
-
-    1 while unlink $filename_containing_parens;
-}
-
-# Test the globbing of a drive relative pattern such as "c:*.pl".
-# NB. previous versions of DosGlob inserted "./ after the drive letter to
-# make the expansion process work correctly. However, while it is harmless,
-# there is no reason for it to be in the result.
-my $cwd = Cwd::cwd();
-if ($cwd =~ /^([a-zA-Z]:)/) {
-    my $drive = $1;
-    @r = ();
-    # This assumes we're in the "t" directory.
-    eval { @r = File::DosGlob::glob("${drive}io/*.t") };
-    ok(@r and !grep !m|^${drive}io/[^/]*\.t$|, @r);
 } else {
-    pass();
+    while (<*/a*.t>) {
+	my $i = 0;
+	print "# $_ <";
+	push @s, $_;
+	while (glob '*/b*.t') {
+	    print " $_";
+	    $i++;
+	}
+	print " >\n";
+    }
 }
+print "not " if "@r" ne "@s";
+print "ok 10\n";
+EOT
