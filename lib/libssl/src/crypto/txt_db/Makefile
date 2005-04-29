@@ -1,5 +1,5 @@
 #
-# OpenSSL/crypto/txt_db/Makefile
+# SSLeay/crypto/txt_db/Makefile
 #
 
 DIR=	txt_db
@@ -7,6 +7,11 @@ TOP=	../..
 CC=	cc
 INCLUDES=
 CFLAG=-g
+INSTALL_PREFIX=
+OPENSSLDIR=     /usr/local/ssl
+INSTALLTOP=/usr/local/ssl
+MAKEDEPPROG=	makedepend
+MAKEDEPEND=	$(TOP)/util/domd $(TOP) -MD $(MAKEDEPPROG)
 MAKEFILE=	Makefile
 AR=		ar r
 
@@ -46,7 +51,6 @@ links:
 	@$(PERL) $(TOP)/util/mklink.pl ../../apps $(APPS)
 
 install:
-	@[ -n "$(INSTALLTOP)" ] # should be set by top Makefile...
 	@headerlist="$(EXHEADER)"; for i in $$headerlist ; \
 	do  \
 	(cp $$i $(INSTALL_PREFIX)$(INSTALLTOP)/include/openssl/$$i; \
@@ -62,7 +66,6 @@ lint:
 	lint -DLINT $(INCLUDES) $(SRC)>fluff
 
 depend:
-	@[ -n "$(MAKEDEPEND)" ] # should be set by top Makefile...
 	$(MAKEDEPEND) -- $(CFLAG) $(INCLUDES) $(DEPFLAG) -- $(PROGS) $(LIBSRC)
 
 dclean:
@@ -78,7 +81,6 @@ txt_db.o: ../../e_os.h ../../include/openssl/bio.h
 txt_db.o: ../../include/openssl/buffer.h ../../include/openssl/crypto.h
 txt_db.o: ../../include/openssl/e_os2.h ../../include/openssl/err.h
 txt_db.o: ../../include/openssl/lhash.h ../../include/openssl/opensslconf.h
-txt_db.o: ../../include/openssl/opensslv.h ../../include/openssl/ossl_typ.h
-txt_db.o: ../../include/openssl/safestack.h ../../include/openssl/stack.h
-txt_db.o: ../../include/openssl/symhacks.h ../../include/openssl/txt_db.h
-txt_db.o: ../cryptlib.h txt_db.c
+txt_db.o: ../../include/openssl/opensslv.h ../../include/openssl/safestack.h
+txt_db.o: ../../include/openssl/stack.h ../../include/openssl/symhacks.h
+txt_db.o: ../../include/openssl/txt_db.h ../cryptlib.h txt_db.c
