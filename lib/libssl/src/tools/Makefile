@@ -1,5 +1,5 @@
 #
-# OpenSSL/tools/Makefile
+# SSLeay/tools/Makefile
 #
 
 DIR=	tools
@@ -7,11 +7,15 @@ TOP=	..
 CC=	cc
 INCLUDES= -I$(TOP) -I../../include
 CFLAG=-g
+INSTALL_PREFIX=
+OPENSSLDIR=     /usr/local/ssl
+INSTALLTOP=/usr/local/ssl
+MAKEDEPPROG=	makedepend
+MAKEDEPEND=	$(TOP)/util/domd $(TOP) -MD $(MAKEDEPPROG)
 MAKEFILE=	Makefile
 
 CFLAGS= $(INCLUDES) $(CFLAG)
 
-GENERAL=Makefile
 TEST=
 APPS= c_rehash
 MISC_APPS= c_hash c_info c_issuer c_name
@@ -19,7 +23,6 @@ MISC_APPS= c_hash c_info c_issuer c_name
 all:
 
 install:
-	@[ -n "$(INSTALLTOP)" ] # should be set by top Makefile...
 	@for i in $(APPS) ; \
 	do  \
 	(cp $$i $(INSTALL_PREFIX)$(INSTALLTOP)/bin/$$i.new; \
@@ -49,7 +52,6 @@ depend:
 dclean:
 	$(PERL) -pe 'if (/^# DO NOT DELETE THIS LINE/) {print; exit(0);}' $(MAKEFILE) >Makefile.new
 	mv -f Makefile.new $(MAKEFILE)
-	rm -f c_rehash
 
 clean:
 	rm -f *.o *.obj lib tags core .pure .nfs* *.old *.bak fluff
