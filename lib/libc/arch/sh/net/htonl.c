@@ -1,4 +1,4 @@
-/*	$OpenBSD: htonl.c,v 1.1.1.1 2006/10/10 22:07:10 miod Exp $	*/
+/*	$OpenBSD: htonl.c,v 1.1 2006/10/10 22:07:10 miod Exp $	*/
 /*	$NetBSD: htonl.c,v 1.3 2005/12/24 23:10:08 perry Exp $	*/
 
 /*-
