@@ -1,6 +1,6 @@
 /* crypto/engine/e_chil.c -*- mode: C; c-file-style: "eay" -*- */
 /* Written by Richard Levitte (richard@levitte.org), Geoff Thorpe
- * (geoff@geoffthorpe.net) and Dr Stephen N Henson (steve@openssl.org)
+ * (geoff@geoffthorpe.net) and Dr Stephen N Henson (shenson@bigfoot.com)
  * for the OpenSSL project 2000.
  */
 /* ====================================================================
@@ -111,10 +111,11 @@ static int hwcrhk_mod_exp(BIGNUM *r, const BIGNUM *a, const BIGNUM *p,
 #ifndef OPENSSL_NO_RSA
 /* RSA stuff */
 static int hwcrhk_rsa_mod_exp(BIGNUM *r, const BIGNUM *I, RSA *rsa, BN_CTX *ctx);
+#endif
+#ifndef OPENSSL_NO_RSA
 /* This function is aliased to mod_exp (with the mont stuff dropped). */
 static int hwcrhk_mod_exp_mont(BIGNUM *r, const BIGNUM *a, const BIGNUM *p,
 		const BIGNUM *m, BN_CTX *ctx, BN_MONT_CTX *m_ctx);
-static int hwcrhk_rsa_finish(RSA *rsa);
 #endif
 
 #ifndef OPENSSL_NO_DH
@@ -134,6 +135,10 @@ static EVP_PKEY *hwcrhk_load_privkey(ENGINE *eng, const char *key_id,
 	UI_METHOD *ui_method, void *callback_data);
 static EVP_PKEY *hwcrhk_load_pubkey(ENGINE *eng, const char *key_id,
 	UI_METHOD *ui_method, void *callback_data);
+#ifndef OPENSSL_NO_RSA
+static void hwcrhk_ex_free(void *obj, void *item, CRYPTO_EX_DATA *ad,
+	int ind,long argl, void *argp);
+#endif
 
 /* Interaction stuff */
 static int hwcrhk_insert_card(const char *prompt_info,
@@ -159,11 +164,11 @@ static const ENGINE_CMD_DEFN hwcrhk_cmd_defns[] = {
 		ENGINE_CMD_FLAG_STRING},
 	{HWCRHK_CMD_FORK_CHECK,
 		"FORK_CHECK",
-		"Turns fork() checking on (non-zero) or off (zero)",
+		"Turns fork() checking on or off (boolean)",
 		ENGINE_CMD_FLAG_NUMERIC},
 	{HWCRHK_CMD_THREAD_LOCKING,
 		"THREAD_LOCKING",
-		"Turns thread-safe locking on (zero) or off (non-zero)",
+		"Turns thread-safe locking on or off (boolean)",
 		ENGINE_CMD_FLAG_NUMERIC},
 	{HWCRHK_CMD_SET_USER_INTERFACE,
 		"SET_USER_INTERFACE",
@@ -188,7 +193,7 @@ static RSA_METHOD hwcrhk_rsa =
 	hwcrhk_rsa_mod_exp,
 	hwcrhk_mod_exp_mont,
 	NULL,
-	hwcrhk_rsa_finish,
+	NULL,
 	0,
 	NULL,
 	NULL,
@@ -227,6 +232,7 @@ static RAND_METHOD hwcrhk_rand =
 /* Constants used when creating the ENGINE */
 static const char *engine_hwcrhk_id = "chil";
 static const char *engine_hwcrhk_name = "CHIL hardware engine support";
+
 #ifndef OPENSSL_NO_DYNAMIC_ENGINE 
 /* Compatibility hack, the dynamic library uses this form in the path */
 static const char *engine_hwcrhk_id_alt = "ncipher";
@@ -583,6 +589,12 @@ static int hwcrhk_init(ENGINE *e)
 			hwcrhk_globals.mutex_release = hwcrhk_mutex_unlock;
 			hwcrhk_globals.mutex_destroy = hwcrhk_mutex_destroy;
 			}
+		else if (CRYPTO_get_locking_callback() != NULL)
+			{
+			HWCRHKerr(HWCRHK_F_HWCRHK_INIT,HWCRHK_R_LOCKING_MISSING);
+			ERR_add_error_data(1,"You HAVE to add dynamic locking callbacks via CRYPTO_set_dynlock_{create,lock,destroy}_callback()");
+			goto err;
+			}
 		}
 
 	/* Try and get a context - if not, we may have a DSO but no
@@ -597,7 +609,7 @@ static int hwcrhk_init(ENGINE *e)
 	if (hndidx_rsa == -1)
 		hndidx_rsa = RSA_get_ex_new_index(0,
 			"nFast HWCryptoHook RSA key handle",
-			NULL, NULL, NULL);
+			NULL, NULL, hwcrhk_ex_free);
 #endif
 	return 1;
 err:
@@ -841,6 +853,8 @@ static EVP_PKEY *hwcrhk_load_privkey(ENGINE *eng, const char *key_id,
 
 	return res;
  err:
+	if (res)
+		EVP_PKEY_free(res);
 #ifndef OPENSSL_NO_RSA
 	if (rtmp)
 		RSA_free(rtmp);
@@ -1073,21 +1087,6 @@ static int hwcrhk_mod_exp_mont(BIGNUM *r, const BIGNUM *a, const BIGNUM *p,
 	{
 	return hwcrhk_mod_exp(r, a, p, m, ctx);
 	}
-
-static int hwcrhk_rsa_finish(RSA *rsa)
-	{
-	HWCryptoHook_RSAKeyHandle *hptr;
-
-	hptr = RSA_get_ex_data(rsa, hndidx_rsa);
-	if (hptr)
-                {
-                p_hwcrhk_RSAUnloadKey(*hptr, NULL);
-                OPENSSL_free(hptr);
-		RSA_set_ex_data(rsa, hndidx_rsa, NULL);
-                }
-	return 1;
-	}
-
 #endif
 
 #ifndef OPENSSL_NO_DH
@@ -1146,6 +1145,34 @@ static int hwcrhk_rand_status(void)
 	return 1;
 	}
 
+/* This cleans up an RSA KM key, called when ex_data is freed */
+#ifndef OPENSSL_NO_RSA
+static void hwcrhk_ex_free(void *obj, void *item, CRYPTO_EX_DATA *ad,
+	int ind,long argl, void *argp)
+{
+	char tempbuf[1024];
+	HWCryptoHook_ErrMsgBuf rmsg;
+#ifndef OPENSSL_NO_RSA
+	HWCryptoHook_RSAKeyHandle *hptr;
+#endif
+#if !defined(OPENSSL_NO_RSA)
+	int ret;
+#endif
+
+	rmsg.buf = tempbuf;
+	rmsg.size = sizeof(tempbuf);
+
+#ifndef OPENSSL_NO_RSA
+	hptr = (HWCryptoHook_RSAKeyHandle *) item;
+	if(hptr)
+                {
+                ret = p_hwcrhk_RSAUnloadKey(*hptr, NULL);
+                OPENSSL_free(hptr);
+                }
+#endif
+}
+#endif
+
 /* Mutex calls: since the HWCryptoHook model closely follows the POSIX model
  * these just wrap the POSIX functions and add some logging.
  */
@@ -1183,11 +1210,6 @@ static int hwcrhk_get_pass(const char *prompt_info,
 	pem_password_cb *callback = NULL;
 	void *callback_data = NULL;
         UI_METHOD *ui_method = NULL;
-	/* Despite what the documentation says prompt_info can be
-	 * an empty string.
-	 */
-	if (prompt_info && !*prompt_info)
-		prompt_info = NULL;
 
         if (cactx)
                 {
@@ -1289,14 +1311,10 @@ static int hwcrhk_insert_card(const char *prompt_info,
 		{
 		char answer;
 		char buf[BUFSIZ];
-		/* Despite what the documentation says wrong_info can be
-	 	 * an empty string.
-		 */
-		if (wrong_info && *wrong_info)
+
+		if (wrong_info)
 			BIO_snprintf(buf, sizeof(buf)-1,
 				"Current card: \"%s\"\n", wrong_info);
-		else
-			buf[0] = 0;
 		ok = UI_dup_info_string(ui, buf);
 		if (ok >= 0 && prompt_info)
 			{
