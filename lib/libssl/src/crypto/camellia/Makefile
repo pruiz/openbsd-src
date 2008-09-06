@@ -11,7 +11,7 @@ CFLAG=-g
 MAKEFILE=	Makefile
 AR=		ar r
 
-CMLL_ENC= camellia.o cmll_misc.o cmll_cbc.o
+CAMELLIA_ASM_OBJ=
 
 CFLAGS= $(INCLUDES) $(CFLAG)
 ASFLAGS= $(INCLUDES) $(ASFLAG)
@@ -23,9 +23,10 @@ APPS=
 
 LIB=$(TOP)/libcrypto.a
 LIBSRC=camellia.c cmll_misc.c cmll_ecb.c cmll_cbc.c cmll_ofb.c \
-	   cmll_cfb.c cmll_ctr.c cmll_utl.c
+	   cmll_cfb.c cmll_ctr.c 
 
-LIBOBJ= cmll_ecb.o cmll_ofb.o cmll_cfb.o cmll_ctr.o cmll_utl.o $(CMLL_ENC)
+LIBOBJ= camellia.o cmll_misc.o cmll_ecb.o cmll_cbc.o cmll_ofb.o \
+		cmll_cfb.o cmll_ctr.o $(CAMELLIA_ASM_OBJ)
 
 SRC= $(LIBSRC)
 
@@ -44,10 +45,8 @@ lib:	$(LIBOBJ)
 	$(RANLIB) $(LIB) || echo Never mind.
 	@touch lib
 
-cmll-x86.s:	asm/cmll-x86.pl ../perlasm/x86asm.pl
-	$(PERL) asm/cmll-x86.pl $(PERLASM_SCHEME) $(CFLAGS) $(PROCESSOR) > $@
-cmll-x86_64.s:  asm/cmll-x86_64.pl
-	$(PERL) asm/cmll-x86_64.pl $(PERLASM_SCHEME) > $@
+$(LIBOBJ): $(LIBSRC)
+
 
 files:
 	$(PERL) $(TOP)/util/files.pl Makefile >> $(TOP)/MINFO
@@ -86,25 +85,19 @@ clean:
 
 # DO NOT DELETE THIS LINE -- make depend depends on it.
 
-camellia.o: ../../include/openssl/opensslconf.h camellia.c camellia.h
-camellia.o: cmll_locl.h
-cmll_cbc.o: ../../include/openssl/camellia.h ../../include/openssl/modes.h
-cmll_cbc.o: ../../include/openssl/opensslconf.h cmll_cbc.c
-cmll_cfb.o: ../../include/openssl/camellia.h ../../include/openssl/modes.h
-cmll_cfb.o: ../../include/openssl/opensslconf.h cmll_cfb.c
-cmll_ctr.o: ../../include/openssl/camellia.h ../../include/openssl/modes.h
-cmll_ctr.o: ../../include/openssl/opensslconf.h cmll_ctr.c
-cmll_ecb.o: ../../include/openssl/camellia.h
+camellia.o: ../../include/openssl/e_os2.h ../../include/openssl/opensslconf.h
+camellia.o: camellia.c camellia.h cmll_locl.h
+cmll_cbc.o: ../../include/openssl/camellia.h ../../include/openssl/e_os2.h
+cmll_cbc.o: ../../include/openssl/opensslconf.h cmll_cbc.c cmll_locl.h
+cmll_cfb.o: ../../e_os.h ../../include/openssl/camellia.h
+cmll_cfb.o: ../../include/openssl/e_os2.h ../../include/openssl/opensslconf.h
+cmll_cfb.o: cmll_cfb.c cmll_locl.h
+cmll_ctr.o: ../../include/openssl/camellia.h ../../include/openssl/e_os2.h
+cmll_ctr.o: ../../include/openssl/opensslconf.h cmll_ctr.c cmll_locl.h
+cmll_ecb.o: ../../include/openssl/camellia.h ../../include/openssl/e_os2.h
 cmll_ecb.o: ../../include/openssl/opensslconf.h cmll_ecb.c cmll_locl.h
-cmll_misc.o: ../../include/openssl/camellia.h ../../include/openssl/crypto.h
-cmll_misc.o: ../../include/openssl/e_os2.h ../../include/openssl/opensslconf.h
-cmll_misc.o: ../../include/openssl/opensslv.h ../../include/openssl/ossl_typ.h
-cmll_misc.o: ../../include/openssl/safestack.h ../../include/openssl/stack.h
-cmll_misc.o: ../../include/openssl/symhacks.h cmll_locl.h cmll_misc.c
-cmll_ofb.o: ../../include/openssl/camellia.h ../../include/openssl/modes.h
-cmll_ofb.o: ../../include/openssl/opensslconf.h cmll_ofb.c
-cmll_utl.o: ../../include/openssl/camellia.h ../../include/openssl/crypto.h
-cmll_utl.o: ../../include/openssl/e_os2.h ../../include/openssl/opensslconf.h
-cmll_utl.o: ../../include/openssl/opensslv.h ../../include/openssl/ossl_typ.h
-cmll_utl.o: ../../include/openssl/safestack.h ../../include/openssl/stack.h
-cmll_utl.o: ../../include/openssl/symhacks.h cmll_locl.h cmll_utl.c
+cmll_misc.o: ../../include/openssl/camellia.h ../../include/openssl/e_os2.h
+cmll_misc.o: ../../include/openssl/opensslconf.h
+cmll_misc.o: ../../include/openssl/opensslv.h cmll_locl.h cmll_misc.c
+cmll_ofb.o: ../../include/openssl/camellia.h ../../include/openssl/e_os2.h
+cmll_ofb.o: ../../include/openssl/opensslconf.h cmll_locl.h cmll_ofb.c
