@@ -40,8 +40,7 @@ $0 =~ m/(.*[\/\\])[^\/\\]+$/; $dir=$1;
 ( $xlate="${dir}../../perlasm/x86_64-xlate.pl" and -f $xlate) or
 die "can't locate x86_64-xlate.pl";
 
-open OUT,"| \"$^X\" $xlate $flavour $output";
-*STDOUT=*OUT;
+open STDOUT,"| $^X $xlate $flavour $output";
 
 sub hi() { my $r=shift; $r =~ s/%[er]([a-d])x/%\1h/;    $r; }
 sub lo() { my $r=shift; $r =~ s/%[er]([a-d])x/%\1l/;
@@ -657,7 +656,7 @@ Camellia_cbc_encrypt:
 	mov	%rsi,$out		# out argument
 	mov	%r8,%rbx		# ivp argument
 	mov	%rcx,$key		# key argument
-	mov	272(%rcx),${keyend}d	# grandRounds
+	mov	272(%rcx),$keyend	# grandRounds
 
 	mov	%r8,$_ivp
 	mov	%rbp,$_rsp
@@ -860,7 +859,7 @@ Camellia_cbc_encrypt:
 	ret
 .size	Camellia_cbc_encrypt,.-Camellia_cbc_encrypt
 
-.asciz	"Camellia for x86_64 by <appro\@openssl.org>"
+.asciz	"Camellia for x86_64 by <appro@openssl.org>"
 ___
 }
 
