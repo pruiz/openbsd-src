@@ -74,6 +74,7 @@ int MAIN(int argc, char **argv)
 	EVP_PKEY *pkey=NULL;
 	int badarg = 0;
 #ifndef OPENSSL_NO_ENGINE
+	ENGINE *e = NULL;
 	char *engine=NULL;
 #endif
 	int ret = 1;
@@ -140,7 +141,7 @@ int MAIN(int argc, char **argv)
 		}
 
 #ifndef OPENSSL_NO_ENGINE
-        setup_engine(bio_err, engine, 0);
+        e = setup_engine(bio_err, engine, 0);
 #endif
 
 	if (infile)
@@ -178,7 +179,7 @@ int MAIN(int argc, char **argv)
 	pkey = PEM_read_bio_Parameters(in, NULL);
 	if (!pkey)
 		{
-		BIO_printf(bio_err, "Error reading parameters\n");
+		BIO_printf(bio_err, "Error reading paramters\n");
 		ERR_print_errors(bio_err);
 		goto end;
 		}
