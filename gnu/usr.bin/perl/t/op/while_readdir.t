@@ -9,49 +9,8 @@ BEGIN {
 use strict;
 use warnings;
 
-plan 10;
-
-# Need to run this in a quiet private directory as it assumes that it can read
-# the contents twice and get the same result.
-my $tempdir = tempfile;
-
-mkdir $tempdir, 0700 or die "Can't mkdir '$tempdir': $!";
-chdir $tempdir or die die "Can't chdir '$tempdir': $!";
-
-my $cleanup = 1;
-my %tempfiles;
-
-END {
-    if ($cleanup) {
-	foreach my $file (keys %tempfiles) {
-	    # We only wrote each of these once so 1 delete should work:
-	    if (unlink $file) {
-		warn "unlink tempfile '$file' passed but it's still there"
-		    if -e $file;
-	    } else {
-		warn "Couldn't unlink tempfile '$file': $!";
-	    }
-	}
-	chdir '..' or die "Couldn't chdir .. for cleanup: $!";
-	rmdir $tempdir or die "Couldn't unlink tempdir '$tempdir': $!";
-    }
-}
-
-# This is intentionally not random (per run), but intentionally will try to
-# give different file names for different people running this test.
-srand $< * $];
-
-my @chars = ('A' .. 'Z', 'a' .. 'z', 0 .. 9);
-
-sub make_file {
-    my $name = shift;
-
-    return if $tempfiles{$name}++;
-
-    print "# Writing to $name in $tempdir\n";
-
-    open my $fh, '>', $name or die "Can't open '$name' for writing: $!\n";
-    print $fh <<'FILE0';
+open my $fh, ">", "0" or die "Can't open '0' for writing: $!\n";
+print $fh <<'FILE0';
 This file is here for testing
 
 while(readdir $dir){...}
@@ -59,20 +18,9 @@ while(readdir $dir){...}
 
 etc
 FILE0
-    close $fh or die "Can't close '$name': $!";
-}
+close $fh;
 
-sub make_some_files {
-    for (1..int rand 10) {
-	my $name;
-	$name .= $chars[rand $#chars] for 1..int(10 + rand 5);
-	make_file($name);
-    }
-}
-
-make_some_files();
-make_file('0');
-make_some_files();
+plan 10;
 
 ok(-f '0', "'0' file is here");
 
@@ -178,3 +126,5 @@ rewinddir $dirhandle;
 }
 
 closedir $dirhandle;
+
+END { 1 while unlink "0" }

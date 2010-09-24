@@ -118,8 +118,6 @@ L<   aha>
 L<oho   >
 L<"Warnings"> this one is ok
 L</unescaped> ok too, this POD has an X of the same name
-L<http://www.perl.org> this is OK
-L<The Perl Home Page|http://www.perl.org> this is also OK
 
 =head2 Warnings
 
@@ -194,15 +192,6 @@ we already have a head Misc
 
 =head2 another one
 
-=head2 the next line should be empty
-=head2 ... but there is a command instead
-
-And here is some text
-=head2 again followed by a command
-
-  verbatim
-=item line missing
-
 previous section is empty!
 
 =head1 LINK TESTS
@@ -217,25 +206,4 @@ trigger a podchecker warning (using bleadperl) :
 
 =cut
 
-=pod
-
-=head1 ON-OFF tests
-
-The above =pod is OK. The following =cut is ok, the one after not.
-
-=cut
-
-# some comment or code here, not POD
-
-=cut
-
-# more code
-
-=head2 This opens POD
-
-=pod
-
-And the =pod above is too much.
-
-=cut
 
