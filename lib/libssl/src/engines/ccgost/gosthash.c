@@ -42,7 +42,7 @@ static void circle_xor8 (const byte *w, byte *k)
 	byte buf[8];
 	int i;
 	memcpy(buf,w,8);
-	memmove(k,w+8,24);
+	memcpy(k,w+8,24);
 	for(i=0;i<8;i++) 
 		k[i+24]=buf[i]^k[i];
 	}
@@ -180,6 +180,8 @@ int start_hash(gost_hash_ctx *ctx)
  */
 int hash_block(gost_hash_ctx *ctx,const byte *block, size_t length)
 	{
+	const byte *curptr=block;
+	const byte *barrier=block+(length-32);/* Last byte we can safely hash*/
 	if (ctx->left)
 		{
 		/*There are some bytes from previous step*/
@@ -194,25 +196,24 @@ int hash_block(gost_hash_ctx *ctx,const byte *block, size_t length)
 			{
 			return 1;
 			}	
-		block+=add_bytes;
-		length-=add_bytes;
+		curptr=block+add_bytes;
 		hash_step(ctx->cipher_ctx,ctx->H,ctx->remainder);
 		add_blocks(32,ctx->S,ctx->remainder);
 		ctx->len+=32;
 		ctx->left=0;
 		}
-	while (length>=32)
+	while (curptr<=barrier)
 		{	
-		hash_step(ctx->cipher_ctx,ctx->H,block);
+		hash_step(ctx->cipher_ctx,ctx->H,curptr);
 			
-		add_blocks(32,ctx->S,block);
+		add_blocks(32,ctx->S,curptr);
 		ctx->len+=32;
-		block+=32;
-		length-=32;
+		curptr+=32;
 		}	
-	if (length)
+	if (curptr!=block+length)
 		{
-		memcpy(ctx->remainder,block,ctx->left=length);
+		ctx->left=block+length-curptr;
+		memcpy(ctx->remainder,curptr,ctx->left);
 		}	
 	return 1;	
 	}
