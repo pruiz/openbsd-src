@@ -25,6 +25,7 @@
 #if LDNS_BUILD_CONFIG_HAVE_SSL
 #include <openssl/ssl.h>
 #endif /* LDNS_BUILD_CONFIG_HAVE_SSL */
+#include <ldns/dnssec.h>
 #include <ldns/util.h>
 #include <errno.h>
 
@@ -53,8 +54,12 @@ enum ldns_enum_algorithm
         LDNS_RSASHA256          = 8,   /* RFC 5702 */
         LDNS_RSASHA512          = 10,  /* RFC 5702 */
         LDNS_ECC_GOST           = 12,  /* RFC 5933 */
-        LDNS_ECDSAP256SHA256    = 13,  /* RFC 6605 */
-        LDNS_ECDSAP384SHA384    = 14,  /* RFC 6605 */
+#if LDNS_BUILD_CONFIG_USE_ECDSA
+	/* this ifdef has to be removed once it is no longer experimental,
+	 * to be able to use these values outside of the ldns library itself */
+        LDNS_ECDSAP256SHA256    = 13,  /* draft-hoffman-dnssec-ecdsa */
+        LDNS_ECDSAP384SHA384    = 14,  /* EXPERIMENTAL */
+#endif
         LDNS_INDIRECT           = 252,
         LDNS_PRIVATEDNS         = 253,
         LDNS_PRIVATEOID         = 254
@@ -68,8 +73,12 @@ enum ldns_enum_hash
 {
         LDNS_SHA1               = 1,  /* RFC 4034 */
         LDNS_SHA256             = 2,  /* RFC 4509 */
-        LDNS_HASH_GOST          = 3,  /* RFC 5933 */
-        LDNS_SHA384             = 4   /* RFC 6605 */
+        LDNS_HASH_GOST          = 3   /* RFC 5933 */
+#if LDNS_BUILD_CONFIG_USE_ECDSA
+	/* this ifdef has to be removed once it is no longer experimental,
+	 * to be able to use these values outside of the ldns library itself */
+        ,LDNS_SHA384             = 4   /* draft-hoffman-dnssec-ecdsa EXPERIMENTAL */
+#endif
 };
 typedef enum ldns_enum_hash ldns_hash;
 
@@ -86,8 +95,12 @@ enum ldns_enum_signing_algorithm
 	LDNS_SIGN_RSASHA512	 = LDNS_RSASHA512,
 	LDNS_SIGN_DSA_NSEC3	 = LDNS_DSA_NSEC3,
 	LDNS_SIGN_ECC_GOST       = LDNS_ECC_GOST,
+#if LDNS_BUILD_CONFIG_USE_ECDSA
+	/* this ifdef has to be removed once it is no longer experimental,
+	 * to be able to use these values outside of the ldns library itself */
         LDNS_SIGN_ECDSAP256SHA256 = LDNS_ECDSAP256SHA256,
         LDNS_SIGN_ECDSAP384SHA384 = LDNS_ECDSAP384SHA384,
+#endif
 	LDNS_SIGN_HMACMD5	 = 157,	/* not official! This type is for TSIG, not DNSSEC */
 	LDNS_SIGN_HMACSHA1	 = 158,	/* not official! This type is for TSIG, not DNSSEC */
 	LDNS_SIGN_HMACSHA256 = 159  /* ditto */
@@ -166,13 +179,13 @@ typedef struct ldns_struct_key_list ldns_key_list;
  * Creates a new empty key list
  * \return a new ldns_key_list structure pointer
  */
-ldns_key_list *ldns_key_list_new(void);
+ldns_key_list *ldns_key_list_new();
 
 /** 
  * Creates a new empty key structure
  * \return a new ldns_key * structure
  */
-ldns_key *ldns_key_new(void);
+ldns_key *ldns_key_new();
 
 /**
  * Creates a new key based on the algorithm
@@ -298,36 +311,17 @@ void ldns_key_set_algorithm(ldns_key *k, ldns_signing_algorithm l);
 void ldns_key_set_evp_key(ldns_key *k, EVP_PKEY *e);
 
 /**
- * Set the key's rsa data.
- * The rsa data should be freed by the user.
+ * Set the key's rsa data
  * \param[in] k the key
  * \param[in] r the rsa data
  */
 void ldns_key_set_rsa_key(ldns_key *k, RSA *r);
-
 /**
  * Set the key's dsa data
- * The dsa data should be freed by the user.
  * \param[in] k the key
  * \param[in] d the dsa data
  */
 void ldns_key_set_dsa_key(ldns_key *k, DSA *d);
-
-/**
- * Assign the key's rsa data
- * The rsa data will be freed automatically when the key is freed.
- * \param[in] k the key
- * \param[in] r the rsa data
- */
-void ldns_key_assign_rsa_key(ldns_key *k, RSA *r);
-
-/**
- * Assign the key's dsa data
- * The dsa data will be freed automatically when the key is freed.
- * \param[in] k the key
- * \param[in] d the dsa data
- */
-void ldns_key_assign_dsa_key(ldns_key *k, DSA *d);
 
 /** 
  * Get the PKEY id for GOST, loads GOST into openssl as a side effect.

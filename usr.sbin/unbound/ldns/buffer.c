@@ -140,8 +140,7 @@ ldns_buffer_free(ldns_buffer *buffer)
 		return;
 	}
 
-	if (!buffer->_fixed)
-		LDNS_FREE(buffer->_data);
+	LDNS_FREE(buffer->_data);
 
 	LDNS_FREE(buffer);
 }

@@ -40,7 +40,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: sha2.h,v 1.1.1.1 2012/03/26 18:08:25 sthen Exp $
+ * $Id: sha2.h,v 1.1 2012/03/26 18:08:25 sthen Exp $
  */
 
 #ifndef __LDNS_SHA2_H__

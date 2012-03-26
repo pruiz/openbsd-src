@@ -14,12 +14,12 @@
 #include <errno.h>
 
 static int
-read_line(FILE *input, char *line, size_t len)
+read_line(FILE *input, char *line)
 {
 	int i;
-	int c;
-
-	for (i = 0; i < (int)len-1; i++) {
+	
+	char c;
+	for (i = 0; i < LDNS_MAX_PACKETLEN; i++) {
 		c = getc(input);
 		if (c == EOF) {
 			return -1;
@@ -35,37 +35,32 @@ read_line(FILE *input, char *line, size_t len)
 
 /* key_list must be initialized with ldns_rr_list_new() */
 ldns_status
-read_key_file(const char *filename, ldns_rr_list *key_list, bool silently)
+read_key_file(const char *filename, ldns_rr_list *key_list)
 {
 	int line_len = 0;
 	int line_nr = 0;
 	int key_count = 0;
-	char line[LDNS_MAX_LINELEN];
+	char line[LDNS_MAX_PACKETLEN];
 	ldns_status status;
 	FILE *input_file;
 	ldns_rr *rr;
 
 	input_file = fopen(filename, "r");
 	if (!input_file) {
-		if (! silently) {
-			fprintf(stderr, "Error opening %s: %s\n",
-				filename, strerror(errno));
-		}
+		fprintf(stderr, "Error opening %s: %s\n",
+		        filename, strerror(errno));
 		return LDNS_STATUS_ERR;
 	}
 	while (line_len >= 0) {
-		line_len = (int) read_line(input_file, line, sizeof(line));
+		line_len = read_line(input_file, line);
 		line_nr++;
 		if (line_len > 0 && line[0] != ';') {
 			status = ldns_rr_new_frm_str(&rr, line, 0, NULL, NULL);
 			if (status != LDNS_STATUS_OK) {
-				if (! silently) {
-					fprintf(stderr,
-						"Error parsing DNSKEY RR "
-						"in line %d: %s\n", line_nr,
-						ldns_get_errorstr_by_id(status)
-						);
-				}
+				fprintf(stderr,
+						"Error parsing DNSKEY RR in line %d: %s\n",
+						line_nr,
+						ldns_get_errorstr_by_id(status));
 			} else if (ldns_rr_get_type(rr) == LDNS_RR_TYPE_DNSKEY || 
 					   ldns_rr_get_type(rr) == LDNS_RR_TYPE_DS) {
 				ldns_rr_list_push_rr(key_list, rr);
@@ -75,7 +70,7 @@ read_key_file(const char *filename, ldns_rr_list *key_list, bool silently)
 			}
 		}
 	}
-	fclose(input_file);
+	printf(";; Number of trusted keys: %d\n", key_count);
 	if (key_count > 0) {
 		return LDNS_STATUS_OK;
 	} else {
@@ -137,7 +132,6 @@ print_ds_of_keys(ldns_pkt *p)
 			ds = ldns_key_rr2ds(ldns_rr_list_rr(keys, i), LDNS_SHA256);
 			local_print_ds(stdout, "; sha256: ", ds);
 		}
-		ldns_rr_list_deep_free(keys);
 	}
 }
 
@@ -246,7 +240,7 @@ print_dnskey_abbr(FILE *fp, ldns_rr *key)
 }
 
 void
-print_rr_list_abbr(FILE *fp, ldns_rr_list *rrlist, const char *usr) 
+print_rr_list_abbr(FILE *fp, ldns_rr_list *rrlist, char *usr) 
 {
 	size_t i;
 	ldns_rr_type tp;
