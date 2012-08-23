@@ -1,5 +1,5 @@
 /*
- * $Id: duration.h,v 1.1.1.1 2012/08/23 22:28:45 sthen Exp $
+ * $Id: duration.h,v 1.1 2012/08/23 22:28:45 sthen Exp $
  *
  * Copyright (c) 2009 NLNet Labs. All rights reserved.
  *
